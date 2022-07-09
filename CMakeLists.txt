@@ -68,7 +68,11 @@ option(OPUS_FUZZING ${OPUS_FUZZING_HELP_STR} OFF)
 add_feature_info(OPUS_FUZZING OPUS_FUZZING ${OPUS_FUZZING_HELP_STR})
 
 set(OPUS_CHECK_ASM_HELP_STR "enable bit-exactness checks between optimized and c implementations.")
-option(OPUS_CHECK_ASM ${OPUS_CHECK_ASM_HELP_STR} OFF)
+cmake_dependent_option(OPUS_CHECK_ASM
+                       ${OPUS_CHECK_ASM_HELP_STR}
+                       OFF
+                       "OPUS_ASSERTIONS"
+                       OFF)
 add_feature_info(OPUS_CHECK_ASM OPUS_CHECK_ASM ${OPUS_CHECK_ASM_HELP_STR})
 
 set(OPUS_INSTALL_PKG_CONFIG_MODULE_HELP_STR "install pkg-config module.")
