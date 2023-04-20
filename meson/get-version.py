@@ -29,28 +29,34 @@ if __name__ == '__main__':
     if args.package_version:
         package_version = None
 
-        # check if git checkout
-        git_dir = os.path.join(srcroot, '.git')
-        is_git = os.path.isdir(git_dir) or os.path.isfile(git_dir)
-        have_git = shutil.which('git') is not None
-
-        if is_git and have_git:
-            git_cmd = subprocess.run(['git', '--git-dir=' + git_dir, 'describe', 'HEAD'], stdout=subprocess.PIPE)
-            if git_cmd.returncode:
-                print('ERROR: Could not extract package version via `git describe` in', srcroot, file=sys.stderr)
-                sys.exit(-1)
-            package_version = git_cmd.stdout.decode('ascii').strip().lstrip('v')
-        else:
+        # Package_version file only exists in release tarballs, so try that
+        # first (we might have a git repository created from the tarball)
+        try:
             with open(os.path.join(srcroot, 'package_version'), 'r') as f:
                 for line in f:
                     if line.startswith('PACKAGE_VERSION="'):
                         package_version = line[17:].strip().lstrip('v').rstrip('"')
                     if package_version:
                         break
+        except:
+            # check if git checkout
+            git_dir = os.path.join(srcroot, '.git')
+            is_git = os.path.isdir(git_dir) or os.path.isfile(git_dir)
+            have_git = shutil.which('git') is not None
 
-        if not package_version:
-            print('ERROR: Could not extract package version from package_version file in', srcroot, file=sys.stderr)
-            sys.exit(-1)
+            if is_git:
+                if have_git:
+                    git_cmd = subprocess.run(['git', '--git-dir=' + git_dir, 'describe', 'HEAD'], stdout=subprocess.PIPE)
+                    if git_cmd.returncode:
+                        print('ERROR: Could not extract package version via `git describe` in', srcroot, file=sys.stderr)
+                        sys.exit(-1)
+                    package_version = git_cmd.stdout.decode('ascii').strip().lstrip('v')
+                else:
+                    print('ERROR: Could not extract package version via "git describe" as the git tool is not available.', file=sys.stderr)
+                    sys.exit(-1)
+            else:
+                print('ERROR: Could not extract package version! There is no package_version file nor do we have a git repository', file=sys.stderr)
+                sys.exit(-1)
 
         print(package_version)
         sys.exit(0)
