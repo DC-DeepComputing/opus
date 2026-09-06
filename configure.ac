@@ -433,19 +433,39 @@ AS_CASE([$host],
         [arm*eabi*], [AS_VAR_SET([RESOLVED_DEFAULT_ARM_NEON_INTR_CFLAGS], "DEFAULT_ARM_NEON_SOFTFP_INTR_CFLAGS")],
         [AS_VAR_SET([RESOLVED_DEFAULT_ARM_NEON_INTR_CFLAGS], "DEFAULT_ARM_NEON_INTR_CFLAGS")])
 
+m4_define([DEFAULT_WASM_SIMD128_CFLAGS], [-msimd128])
+m4_define([DEFAULT_WASM_INTRINSICS_ARCH], [arm])
+
+dnl emscripten (the usual compiler for wasm) has slightly different flags for (emulating) some intrinsics.
+dnl Change the defaults accordingly.
+AS_CASE([$host],
+    [wasm*], [
+        m4_define([DEFAULT_ARM_DOTPROD_INTR_CFLAGS], [-mfpu=neon])
+    ])
+
 AC_ARG_VAR([X86_SSE_CFLAGS], [C compiler flags to compile SSE intrinsics @<:@default=]DEFAULT_X86_SSE_CFLAGS[@:>@])
 AC_ARG_VAR([X86_SSE2_CFLAGS], [C compiler flags to compile SSE2 intrinsics @<:@default=]DEFAULT_X86_SSE2_CFLAGS[@:>@])
 AC_ARG_VAR([X86_SSE4_1_CFLAGS], [C compiler flags to compile SSE4.1 intrinsics @<:@default=]DEFAULT_X86_SSE4_1_CFLAGS[@:>@])
 AC_ARG_VAR([X86_AVX2_CFLAGS], [C compiler flags to compile AVX2 intrinsics @<:@default=]DEFAULT_X86_AVX2_CFLAGS[@:>@])
+
 AC_ARG_VAR([ARM_NEON_INTR_CFLAGS], [C compiler flags to compile ARM NEON intrinsics @<:@default=]DEFAULT_ARM_NEON_INTR_CFLAGS / DEFAULT_ARM_NEON_SOFTFP_INTR_CFLAGS[@:>@])
 AC_ARG_VAR([ARM_DOTPROD_INTR_CFLAGS], [C compiler flags to compile ARM DOTPROD intrinsics @<:@default=]DEFAULT_ARM_DOTPROD_INTR_CFLAGS[@:>@])
+
+AC_ARG_VAR([WASM_SIMD128_CFLAGS], [C compiler flags to enable WASM simd128 and intrinsics @<:@default=]DEFAULT_WASM_SIMD128_CFLAGS[@:>@])
+AC_ARG_VAR([WASM_INTRINSICS_ARCH], [Architecture to use for WASM emulated intrinsics @<:@default=]DEFAULT_WASM_INTRINSICS_ARCH[@:>@])
+
 
 AS_VAR_SET_IF([X86_SSE_CFLAGS], [], [AS_VAR_SET([X86_SSE_CFLAGS], "DEFAULT_X86_SSE_CFLAGS")])
 AS_VAR_SET_IF([X86_SSE2_CFLAGS], [], [AS_VAR_SET([X86_SSE2_CFLAGS], "DEFAULT_X86_SSE2_CFLAGS")])
 AS_VAR_SET_IF([X86_SSE4_1_CFLAGS], [], [AS_VAR_SET([X86_SSE4_1_CFLAGS], "DEFAULT_X86_SSE4_1_CFLAGS")])
+
 AS_VAR_SET_IF([X86_AVX2_CFLAGS], [], [AS_VAR_SET([X86_AVX2_CFLAGS], "DEFAULT_X86_AVX2_CFLAGS")])
 AS_VAR_SET_IF([ARM_NEON_INTR_CFLAGS], [], [AS_VAR_SET([ARM_NEON_INTR_CFLAGS], ["$RESOLVED_DEFAULT_ARM_NEON_INTR_CFLAGS"])])
 AS_VAR_SET_IF([ARM_DOTPROD_INTR_CFLAGS], [], [AS_VAR_SET([ARM_DOTPROD_INTR_CFLAGS], ["DEFAULT_ARM_DOTPROD_INTR_CFLAGS"])])
+
+AS_VAR_SET_IF([WASM_SIMD128_CFLAGS], [], [AS_VAR_SET([WASM_SIMD128_CFLAGS], ["DEFAULT_WASM_SIMD128_CFLAGS"])])
+AS_VAR_SET_IF([WASM_INTRINSICS_ARCH], [], [AS_VAR_SET([WASM_INTRINSICS_ARCH], ["DEFAULT_WASM_INTRINSICS_ARCH"])])
+
 
 AC_DEFUN([OPUS_PATH_NE10],
    [
@@ -521,10 +541,34 @@ AC_DEFUN([OPUS_PATH_NE10],
    ]
 )
 
+
 AS_IF([test x"$enable_intrinsics" = x"yes"],[
-   intrinsics_support=""
+   intrinsics_platform=""
    AS_CASE([$host_cpu],
    [arm*|aarch64*],
+   [
+       intrinsics_platform="arm"
+   ],
+   [i?86|x86_64],
+   [
+       intrinsics_platform="x86"
+   ],
+   [wasm*],
+   [
+        saved_CFLAGS="$CFLAGS"
+        CFLAGS="$CFLAGS $WASM_SIMD128_CFLAGS"
+        AC_MSG_CHECKING([if ${CC} supports ${WASM_SIMD128_CFLAGS}])
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[char foo;]])],
+            [ AC_MSG_RESULT([yes]) ],
+            [ AC_MSG_RESULT([no])
+               CFLAGS="$saved_CFLAGS"
+            ])
+        intrinsics_platform="$WASM_INTRINSICS_ARCH"
+   ])
+
+   intrinsics_support=""
+   AS_CASE([$intrinsics_platform],
+   [arm],
    [
       cpu_arm=yes
       OPUS_CHECK_INTRINSICS(
@@ -638,7 +682,7 @@ AS_IF([test x"$enable_intrinsics" = x"yes"],[
          intrinsics_support=no
       ])
    ],
-   [i?86|x86_64],
+   [x86],
    [
       cpu_x86=yes
       OPUS_CHECK_INTRINSICS(
