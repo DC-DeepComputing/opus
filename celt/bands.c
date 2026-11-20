@@ -493,6 +493,11 @@ int spreading_decision(const CELTMode *m, const celt_norm *X, int *average,
          if (N<=8)
             continue;
          /* Compute rough CDF of |x[j]| */
+#if defined(OPUS_RISCV_MAY_HAVE_RVV)
+         if (opus_riscv_has_rvv())
+            celt_spread_counts_rvv(x, N, tcount);
+         else
+#endif
          for (j=0;j<N;j++)
          {
             opus_val32 x2N; /* Q13 */

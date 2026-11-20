@@ -324,6 +324,13 @@ target_include_directories(
 target_link_libraries(opus PRIVATE ${OPUS_REQUIRED_LIBRARIES})
 target_compile_definitions(opus PRIVATE OPUS_BUILD)
 
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv64")
+  target_sources(opus PRIVATE celt/riscv/pitch_rvv.c)
+  set_source_files_properties(celt/riscv/pitch_rvv.c
+                              PROPERTIES COMPILE_OPTIONS "-march=rv64gcv;-fno-tree-vectorize")
+  target_compile_definitions(opus PRIVATE OPUS_RISCV_MAY_HAVE_RVV)
+endif()
+
 if(OPUS_FIXED_POINT_DEBUG)
   target_compile_definitions(opus PRIVATE FIXED_DEBUG)
 endif()

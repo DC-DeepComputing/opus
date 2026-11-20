@@ -128,6 +128,48 @@ static OPUS_INLINE void xcorr_kernel_c(const opus_val16 * x, const opus_val16 * 
    }
 }
 
+
+#if defined(OPUS_RISCV_MAY_HAVE_RVV)
+# define OVERRIDE_XCORR_KERNEL
+# define OVERRIDE_DUAL_INNER_PROD
+# define OVERRIDE_CELT_INNER_PROD
+# define OVERRIDE_PITCH_XCORR
+
+int opus_riscv_has_rvv(void);
+void xcorr_kernel_rvv(const opus_val16 *x, const opus_val16 *y,
+                      opus_val32 sum[4], int len);
+void dual_inner_prod_rvv(const opus_val16 *x, const opus_val16 *y01,
+                         const opus_val16 *y02, int N, opus_val32 *xy1,
+                         opus_val32 *xy2);
+opus_val32 celt_inner_prod_rvv(const opus_val16 *x, const opus_val16 *y,
+                               int N);
+void celt_pitch_xcorr_rvv(const opus_val16 *_x, const opus_val16 *_y,
+                          opus_val32 *xcorr, int len, int max_pitch, int arch);
+
+# define xcorr_kernel(x, y, sum, len, arch)                                   \
+    ((void)(arch),                                                            \
+     (opus_riscv_has_rvv() ? xcorr_kernel_rvv(x, y, sum, len)                 \
+                           : xcorr_kernel_c(x, y, sum, len)))
+
+# define dual_inner_prod(x, y01, y02, N, xy1, xy2, arch)                     \
+    ((void)(arch),                                                            \
+     ((N) >= 128 && opus_riscv_has_rvv()                                      \
+          ? dual_inner_prod_rvv(x, y01, y02, N, xy1, xy2)                     \
+          : dual_inner_prod_c(x, y01, y02, N, xy1, xy2)))
+
+# define celt_inner_prod(x, y, N, arch)                                      \
+    ((void)(arch),                                                            \
+     ((N) >= 128 && opus_riscv_has_rvv()                                      \
+          ? celt_inner_prod_rvv(x, y, N)                                      \
+          : celt_inner_prod_c(x, y, N)))
+
+# define celt_pitch_xcorr(_x, _y, _xcorr, _len, _max_pitch, _arch)           \
+    ((void)(_arch),                                                           \
+     (opus_riscv_has_rvv()                                                    \
+          ? celt_pitch_xcorr_rvv(_x, _y, _xcorr, _len, _max_pitch, _arch)     \
+          : celt_pitch_xcorr_c(_x, _y, _xcorr, _len, _max_pitch, _arch)))
+#endif /* OPUS_RISCV_MAY_HAVE_RVV */
+
 #ifndef OVERRIDE_XCORR_KERNEL
 #define xcorr_kernel(x, y, sum, len, arch) \
     ((void)(arch),xcorr_kernel_c(x, y, sum, len))

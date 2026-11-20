@@ -204,6 +204,10 @@ static unsigned extract_collapse_mask(int *iy, int N, int B)
 
 opus_val16 op_pvq_search_c(celt_norm *X, int *iy, int K, int N, int arch)
 {
+#if defined(OPUS_RISCV_MAY_HAVE_RVV) && !defined(FIXED_POINT)
+   if (opus_riscv_has_rvv())
+      return op_pvq_search_rvv(X, iy, K, N, arch);
+#endif
    VARDECL(celt_norm, y);
    VARDECL(int, signx);
    int i, j;
@@ -723,6 +727,10 @@ void renormalise_vector(celt_norm *X, int N, opus_val32 gain, int arch)
 
 opus_int32 stereo_itheta(const celt_norm *X, const celt_norm *Y, int stereo, int N, int arch)
 {
+#if defined(OPUS_RISCV_MAY_HAVE_RVV)
+   if (opus_riscv_has_rvv())
+      return stereo_itheta_rvv((const opus_val16 *)X, (const opus_val16 *)Y, stereo, N, arch);
+#endif
    int i;
    int itheta;
    opus_val32 mid, side;

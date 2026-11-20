@@ -91,6 +91,13 @@ unsigned alg_unquant(celt_norm *X, int N, int K, int spread, int B,
 void renormalise_vector(celt_norm *X, int N, opus_val32 gain, int arch);
 
 opus_int32 stereo_itheta(const celt_norm *X, const celt_norm *Y, int stereo, int N, int arch);
+#if defined(OPUS_RISCV_MAY_HAVE_RVV)
+int opus_riscv_has_rvv(void);
+opus_int32 stereo_itheta_rvv(const opus_val16 *X, const opus_val16 *Y,
+                             int stereo, int N, int arch);
+void celt_spread_counts_rvv(const opus_val16 *x, int N, int tcount[3]);
+opus_val16 op_pvq_search_rvv(celt_norm *X, int *iy, int K, int N, int arch);
+#endif
 
 unsigned cubic_quant(celt_norm *X, int N, int K, int B, ec_enc *enc, opus_val32 gain, int resynth);
 unsigned cubic_unquant(celt_norm *X, int N, int K, int B, ec_dec *dec, opus_val32 gain);
