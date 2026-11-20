@@ -36,6 +36,14 @@
 #endif
 
 #include "_kiss_fft_guts.h"
+#if defined(OPUS_RISCV_MAY_HAVE_RVV) && !defined(FIXED_POINT) && !defined(ENABLE_QEXT)
+extern int opus_riscv_has_rvv(void);
+extern void kf_bfly4_m1_rvv(kiss_fft_cpx *Fout, int N);
+extern void kf_bfly4_gen_rvv(kiss_fft_cpx *Fout, const size_t fstride,
+                             const kiss_fft_state *st, int m, int N, int mm);
+extern void kf_bfly2_rvv(kiss_fft_cpx *Fout, int N);
+extern int opus_rvv_fft_off;
+#endif
 #include "arch.h"
 #include "os_support.h"
 #include "mathops.h"
@@ -85,6 +93,12 @@ static void kf_bfly2(
    } else
 #endif
    {
+#if defined(OPUS_RISCV_MAY_HAVE_RVV) && !defined(FIXED_POINT) && !defined(ENABLE_QEXT)
+      if (opus_riscv_has_rvv() && !opus_rvv_fft_off) {
+         kf_bfly2_rvv(Fout, N);
+         return;
+      }
+#endif
       celt_coef tw;
       tw = QCONST32(0.7071067812f, COEF_SHIFT-1);
       /* We know that m==4 here because the radix-2 is just after a radix-4 */
@@ -126,7 +140,13 @@ static void kf_bfly4(
                     )
 {
    int i;
-
+#if defined(OPUS_RISCV_MAY_HAVE_RVV) && !defined(FIXED_POINT) && !defined(ENABLE_QEXT)
+   if (opus_riscv_has_rvv() && !opus_rvv_fft_off) {
+      if (m==1) kf_bfly4_m1_rvv(Fout, N);
+      else kf_bfly4_gen_rvv(Fout, fstride, st, m, N, mm);
+      return;
+   }
+#endif
    if (m==1)
    {
       /* Degenerate case where all the twiddles are 1. */
@@ -597,8 +617,10 @@ void opus_fft_impl(const kiss_fft_state *st,kiss_fft_cpx *fout ARG_FIXED(int dow
     /* st->shift can be -1 */
     shift = st->shift>0 ? st->shift : 0;
 
+
     fstride[0] = 1;
     L=0;
+
     do {
        p = st->factors[2*L];
        m = st->factors[2*L+1];

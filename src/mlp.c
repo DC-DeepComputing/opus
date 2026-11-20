@@ -59,6 +59,12 @@ static OPUS_INLINE float sigmoid_approx(float x)
 
 static void gemm_accum(float *out, const opus_int8 *weights, int rows, int cols, int col_stride, const float *x)
 {
+#if defined(OPUS_RISCV_MAY_HAVE_RVV)
+   if (opus_riscv_has_rvv()) {
+      gemm_accum_rvv(out, weights, rows, cols, col_stride, x);
+      return;
+   }
+#endif
    int i, j;
    for (i=0;i<rows;i++)
    {

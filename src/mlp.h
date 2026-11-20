@@ -57,4 +57,10 @@ void analysis_compute_dense(const AnalysisDenseLayer *layer, float *output, cons
 
 void analysis_compute_gru(const AnalysisGRULayer *gru, float *state, const float *input);
 
+#if defined(OPUS_RISCV_MAY_HAVE_RVV)
+int opus_riscv_has_rvv(void);
+void gemm_accum_rvv(float *out, const opus_int8 *weights, int rows, int cols,
+                    int col_stride, const float *x);
+#endif
+
 #endif /* MLP_H_ */

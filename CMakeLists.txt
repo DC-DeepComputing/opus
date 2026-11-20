@@ -325,9 +325,10 @@ target_link_libraries(opus PRIVATE ${OPUS_REQUIRED_LIBRARIES})
 target_compile_definitions(opus PRIVATE OPUS_BUILD)
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv64")
-  target_sources(opus PRIVATE celt/riscv/pitch_rvv.c)
-  set_source_files_properties(celt/riscv/pitch_rvv.c
+  target_sources(opus PRIVATE celt/riscv/pitch_rvv.c celt/riscv/kiss_fft_rvv.c src/riscv/mlp_rvv.c)
+  set_source_files_properties(celt/riscv/pitch_rvv.c celt/riscv/kiss_fft_rvv.c src/riscv/mlp_rvv.c
                               PROPERTIES COMPILE_OPTIONS "-march=rv64gcv;-fno-tree-vectorize")
+
   target_compile_definitions(opus PRIVATE OPUS_RISCV_MAY_HAVE_RVV)
 endif()
 
